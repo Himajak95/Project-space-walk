@@ -58,6 +58,9 @@ namespace Mission
 			set{ levelPivot = value; }
 		}
 
+		public static bool UpdateTimer;
+		public static bool ReduceHealth;
+
 
 		private static string[] objectives_level01 = new string[] {
 			"Set your helmet visor by pressing the \"V\" key.", 

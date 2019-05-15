@@ -4,9 +4,15 @@ using Design; //Loads the custom UI from Scripts/Library/design.cs
 using Character; //Loads the custom UI from Scripts/Library/character.cs
 using Mission; //Loads the mission from Scripts/Library/mission.cs
 using CharControl; // Loads the inputs from Scripts/Library/input_keylistener.cs
+using ProjectSpaceWalk;
+using System;
 
 [RequireComponent(typeof(AudioSource))]
 public class lev01 : MonoBehaviour {
+
+	[SerializeField] private ImageCaptureManager _imageCaptureManager;
+	[SerializeField] private PlayerController _playerController;
+	private Action _sequence;
 
 	public GameObject object_door = null,
 	object_hatch = null,
@@ -15,7 +21,7 @@ public class lev01 : MonoBehaviour {
 	object_close_door = null,
 	object_camera = null;
 
-	public Camera cam_cutscene01 = null, 
+	public Camera cam_cutscene01 = null,
 		cam_avatar = null;
 
 	private AudioSource music_background = null,
@@ -25,7 +31,6 @@ public class lev01 : MonoBehaviour {
 	heart_beat = null;
 
 	private AudioClip sound_door_open_source = null,
-	sound_camera = null,
 	sound_beep_high = null;
 
 	private float oBackground = 0.0f,
@@ -34,30 +39,20 @@ public class lev01 : MonoBehaviour {
 
 	private bool isIntro = true,
 		isPlayerView = false,
-		isVisor = false,
-		isCamera= false,
-		isCameraFLASH = false,
-		isCameraFLASH_down = false;
+		isVisor = false;
 
 	private Texture2D button_blank = null, 
 	button_blue = null, 
-	button_blue_hover = null,
-	camera_ui = null;
+	button_blue_hover = null;
 
-	private input_keylistener listener;
 	Vector3 originpos;
 	Quaternion originquat;
-
-	private float speed = .02f; // Movement speed 0.02
 
 	private float timeLeft = 8.0f;
 	private bool isTimeLeft = false;
 
 	private int health_counter = 0;
 	private float opactiy_vision = 0.0f;
-	private float cameraFlashOpacity = 0.0f;
-
-	private int snapshot = 0; // counts the camera snapshot
 
 	public Collider target;
 
@@ -114,10 +109,6 @@ public class lev01 : MonoBehaviour {
 		heart_beat.loop = true;
 		heart_beat.volume = 0f;
 
-
-		// Camera snapshot sound effects
-		sound_camera = (AudioClip)Resources.Load("sounds/camera-snapshot");
-
 		// AudioClip sound_door_open_source;
 		sound_door_open_source = (AudioClip)Resources.Load ("sounds/door-open");
 
@@ -151,23 +142,17 @@ public class lev01 : MonoBehaviour {
 		button_blue = (Texture2D)Resources.Load("images/button-blue");
 		button_blue_hover = (Texture2D)Resources.Load("images/button-blue_hover");
 		button_blank = (Texture2D)Resources.Load("images/button-blank");
-		camera_ui = (Texture2D)Resources.Load("images/ui-camera");
 
 		mission.ISMENU = false;
 		mission.LEVELPIVOT = 0; // initilize objective
+		_sequence = SECTION00;
 		mission.IS_OBJ_DONE = false;
 		mission.ISFAIL = false;
 		Time.timeScale = 1;
 		character.HEALTH = 100;
 
-		listener = input_keylistener.GetListener();
 		originpos = cam_avatar.transform.position;
 		originquat = cam_avatar.transform.rotation;
-
-		isCamera = false;
-		isCameraFLASH = false;
-		isCameraFLASH_down = false;
-		snapshot = 0;
 
 		isDone = false;
 		isObjective = false;
@@ -220,41 +205,36 @@ public class lev01 : MonoBehaviour {
 
 
 			VISOR_CONTROL(); // Controls the visor
-
-			// This statement will change the level's objective
-			switch(mission.LEVELPIVOT)
+			
+			if(_sequence != null)
 			{
-			case 0:
 				isObjective = true;
-				if (Input.GetKeyDown(KeyCode.V)){
-					audio.PlayOneShot(sound_beep_high);
-					audio.Play();
-					mission.IS_OBJ_DONE = true;
-					mission.LEVELPIVOT = 1; // Next objective (1)
-
-					// Show the glowing ball to open the hatch
-					object_hatch.SetActive(false);
-					object_hatch.SetActive(true);
-					object_hatch.animation.wrapMode = WrapMode.Loop;
-				}
-				break;
-			case 1:
-				isObjective = true;
-				SECTION01();
-				break;
-			case 2:
-				isObjective = true;
-				SECTION02();
-				break;
-			case 3:
-				isObjective = true;
-				SECTION03();
-				break;
-			case 4:
-				isObjective = true;
-				SECTION04();
-				break;
+				_sequence();
 			}
+
+//			
+//			switch(mission.LEVELPIVOT)
+//			{
+//			case 0:
+//				SECTION00();
+//				break;
+//			case 1:
+//				isObjective = true;
+//				SECTION01();
+//				break;
+//			case 2:
+//				isObjective = true;
+//				SECTION02();
+//				break;
+//			case 3:
+//				isObjective = true;
+//				SECTION03();
+//				break;
+//			case 4:
+//				isObjective = true;
+//				SECTION04();
+//				break;
+//			}
 
 
 
@@ -293,44 +273,17 @@ public class lev01 : MonoBehaviour {
 
 				// set on camera ui
 				if (Input.GetKeyDown(KeyCode.C)){
-					isCamera = !isCamera;
-				}
-
-				// camera sound effects
-				if(isCamera == true){
-					if (Input.GetMouseButtonDown(0)){
-
-						snapshot += 1 ;
-
-						isCameraFLASH = !isCameraFLASH;
-						audio.PlayOneShot(sound_camera);
-						audio.Play();
-
-						if(snapshot == 1){
+					_imageCaptureManager.Enabled = !_imageCaptureManager.Enabled;
+					_imageCaptureManager.OnCaptured += (int e) =>
+					{
+						if(e == 1){
 							mission.IS_OBJ_DONE = true;
 							mission.LEVELPIVOT = 3; // Next objective (3)
+							_sequence = SECTION03;
 							audio.PlayOneShot(sound_beep_high);
 							audio.Play();
 						}
-					}
-				}
-
-				// camera flash effect -> fade-out
-				if(isCameraFLASH == true){
-					cameraFlashOpacity += 0.1f;
-					if(cameraFlashOpacity >= 1f){
-						isCameraFLASH = false;
-						isCameraFLASH_down = true;
-					}
-				}
-
-				// camera flash effect -> fade-in
-				if(isCameraFLASH_down == true){
-					isCameraFLASH = false;
-					cameraFlashOpacity -= 0.2f;
-					if(cameraFlashOpacity <= 0f){
-						isCameraFLASH_down = false;
-					}
+					};
 				}
 			}
 		}
@@ -343,13 +296,13 @@ public class lev01 : MonoBehaviour {
 		// Display MISSION ACCOMPLISH screen
 		if(isDone == true)
 		{
-			design.MissionSuccess(design.Font_Futura, button_blank, button_blue, button_blue_hover);
+			design.MissionSuccess(design.Font_Futura, button_blank, button_blue, button_blue_hover, "level_01");
 		}
 
 		// Display MISSION FAIL screen
 		if((character.HEALTH <= 0)||((dMin == 0)&&(dSec == 0))){
 			mission.ISFAIL = true;
-			design.MissionAbort(design.Font_Futura, button_blank, button_blue, button_blue_hover);
+			design.MissionAbort(design.Font_Futura, button_blank, button_blue, button_blue_hover, "level_01");
 		}
 
 
@@ -358,15 +311,9 @@ public class lev01 : MonoBehaviour {
 			design.StatePause(design.Font_Futura, button_blank, button_blue, button_blue_hover);
 		}
 
-		// Camera UI
-		if(isCamera == true){
-			design.DrawRectangle (new Rect (0,0,Screen.width, Screen.height), new Color(1f,1f,1f,1f), cameraFlashOpacity);
-			GUI.DrawTexture(new Rect(0, 0, camera_ui.width, camera_ui.height), camera_ui);
-		}
-
 
 		// Objectives 2 or greater must display a warning message if the user turns off the visor
-		if((mission.LEVELPIVOT >= 2)&&(mission.ISFAIL == false)){
+		if((mission.LEVELPIVOT >= 2)){
 			VISOR_WARNING();
 		}
 
@@ -419,6 +366,11 @@ public class lev01 : MonoBehaviour {
 	// ************************************************************************
 	// Displays the warning messaage if the user turns off the visor while playing the mission.
 	private void VISOR_WARNING(){
+		if (mission.ISFAIL)
+		{
+			return;
+		}
+
 		design.DrawRectangle (new Rect (0,0,Screen.width, Screen.height), new Color(181/255f,0f,0f,1f), opactiy_vision);
 		design.DrawRectangle (new Rect (0,0,Screen.width, Screen.height), new Color(1f,1f,1f,1f), opactiy_vision);
 		
@@ -456,64 +408,6 @@ public class lev01 : MonoBehaviour {
 	}
 
 	// ************************************************************************
-	// Control the character's camera
-	private void INPUT_KEYS(){
-		if (Input.GetKey(KeyCode.Q))
-		{
-			listener.RecordInputKey(13);
-			cam_avatar.transform.Rotate(Vector3.forward * speed);
-		}
-		// Spin Left
-		else if (Input.GetKey(KeyCode.E))
-		{
-			listener.RecordInputKey(13);
-			cam_avatar.transform.Rotate(Vector3.back * speed);
-		}
-		// Move Forward * Fast
-		else if (Input.GetKey(KeyCode.W) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
-		{
-			listener.RecordInputKey(14);
-			cam_avatar.transform.Translate(Vector3.forward * speed * 1);
-		}
-		// Move Forward
-		else if (Input.GetKey(KeyCode.W))
-		{
-			listener.RecordInputKey(11);
-			cam_avatar.transform.Translate(Vector3.forward * speed);
-		}
-		// Move Backward
-		else if (Input.GetKey(KeyCode.S))
-		{
-			listener.RecordInputKey(11);
-			cam_avatar.transform.Translate(Vector3.back * speed);
-		}
-		// Turn Right
-		else if (Input.GetKey(KeyCode.A))
-		{
-			listener.RecordInputKey(10);
-			cam_avatar.transform.Rotate(Vector3.left * speed);
-		}
-		// Turn Left
-		else if (Input.GetKey(KeyCode.D))
-		{
-			listener.RecordInputKey(10);
-			cam_avatar.transform.Rotate(Vector3.up * speed);
-		}
-		// Tilt Up
-		else if (Input.GetKey(KeyCode.R))
-		{
-			listener.RecordInputKey(12);
-			cam_avatar.transform.Rotate(Vector3.left * speed);
-		}
-		// Tilt Down
-		else if (Input.GetKey(KeyCode.F))
-		{
-			listener.RecordInputKey(12);
-			cam_avatar.transform.Rotate(Vector3.right * speed);
-		}
-	}
-
-	// ************************************************************************
 	// Pauses the game
 	private void INPUT_PAUSE(){
 		if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Joystick1Button16)) {
@@ -544,6 +438,21 @@ public class lev01 : MonoBehaviour {
 		}
 	}
 
+	private void SECTION00(){
+		if (Input.GetKeyDown(KeyCode.V)){
+			audio.PlayOneShot(sound_beep_high);
+			audio.Play();
+			mission.IS_OBJ_DONE = true;
+			mission.LEVELPIVOT = 1; // Next objective (1)
+			_sequence = SECTION01;
+			
+			// Show the glowing ball to open the hatch
+			object_hatch.SetActive(false);
+			object_hatch.SetActive(true);
+			object_hatch.animation.wrapMode = WrapMode.Loop;
+		}
+	}
+	
 	// ************************************************************************
 	// Object 01
 	private void SECTION01(){
@@ -565,6 +474,7 @@ public class lev01 : MonoBehaviour {
 
 						mission.IS_OBJ_DONE = true;
 						mission.LEVELPIVOT = 2; // Next objective (2)
+						_sequence = SECTION02;
 
 						audio.PlayOneShot(sound_beep_high);
 						audio.Play();
@@ -583,7 +493,12 @@ public class lev01 : MonoBehaviour {
 
 		// Waiting for the capsule door to open
 		if(timeLeft < 0){
-			INPUT_KEYS ();
+			if(!_playerController.Enabled)
+			{
+				_playerController.Enabled = true;
+			}
+
+			//INPUT_KEYS ();
 			mission.IS_OBJ_DONE = false;
 			isTimeLeft = true;
 			object_here01.SetActive(true);
@@ -595,7 +510,7 @@ public class lev01 : MonoBehaviour {
 	// Object 03
 	private void SECTION03()
 	{
-		INPUT_KEYS ();
+		//INPUT_KEYS ();
 		mission.IS_OBJ_DONE = false;
 		object_here01.SetActive(false);
 		object_here01.renderer.enabled = false;
@@ -619,7 +534,8 @@ public class lev01 : MonoBehaviour {
 
 					mission.IS_OBJ_DONE = true;
 					mission.LEVELPIVOT = 4; // Next objective (4)
-
+					_sequence = SECTION04;
+					_imageCaptureManager.Enabled = false;
 					audio.PlayOneShot(sound_beep_high);
 					audio.Play();
 				}
@@ -632,7 +548,7 @@ public class lev01 : MonoBehaviour {
 	// Object 04
 	private void SECTION04()
 	{
-		INPUT_KEYS ();
+		//INPUT_KEYS ();
 
 		if(Input.GetMouseButton(0)){
 			RaycastHit hitInfo = new RaycastHit();

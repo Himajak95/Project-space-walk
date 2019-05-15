@@ -134,7 +134,7 @@ namespace Design
 
 		//************************************************************************
 		// Mission fail screen
-		public static void MissionAbort(Font futura_font, Texture2D button_blank, Texture2D button_blue, Texture2D button_blue_hover)
+		public static void MissionAbort(Font futura_font, Texture2D button_blank, Texture2D button_blue, Texture2D button_blue_hover, string sceneName)
 		{
 			var menu_buttons = new GUIStyle();
 			menu_buttons = new GUIStyle(GUI.skin.button);
@@ -154,7 +154,7 @@ namespace Design
 				character.TRACK_OBJECTIVE = 0;
 				//character.HEALTH = 100;
 				mission.ISFAIL = !mission.ISFAIL;
-				Application.LoadLevel("level_01");
+				Application.LoadLevel(sceneName);
 			}
 			
 			//Return Main Menu
@@ -167,7 +167,7 @@ namespace Design
 		}
 
 		//************************************************************************
-		public static void MissionSuccess(Font futura_font, Texture2D button_blank, Texture2D button_blue, Texture2D button_blue_hover)
+		public static void MissionSuccess(Font futura_font, Texture2D button_blank, Texture2D button_blue, Texture2D button_blue_hover, string sceneName)
 		{
 			var menu_buttons = new GUIStyle();
 			menu_buttons = new GUIStyle(GUI.skin.button);
@@ -187,7 +187,7 @@ namespace Design
 				character.TRACK_OBJECTIVE = 0;
 				//character.HEALTH = 100;
 				mission.ISFAIL = !mission.ISFAIL;
-				Application.LoadLevel("level_01");
+				Application.LoadLevel(sceneName);
 			}
 			
 			//Return Main Menu

@@ -421,8 +421,8 @@ public class mainmenu : MonoBehaviour {
 		}
 		
 		//LEVEL 02 BUTTON
-		if(GUI.Button (new Rect (10, 350, button_level01.width, button_level01.height), new GUIContent("", "L01"), design.DrawLevelButton(button_level02, button_level02_lock, 0.7f))){
-			
+		if(GUI.Button (new Rect (10, 350, button_level01.width, button_level01.height), new GUIContent("", "L01"), design.DrawLevelButton(button_level02, button_level02, 0.7f))){
+			Application.LoadLevel("level_02");
 		}
 		
 		//Return Main menu
